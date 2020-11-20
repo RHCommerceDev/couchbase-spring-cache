@@ -34,111 +34,124 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class CachedService {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(CachedService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CachedService.class);
 
-  private long counterGetData = 0L;
-  private long counterGetDataWithSize = 0L;
-  private long counterGetDataWrongCache = 0L;
+    private long counterGetData = 0L;
+    private long counterGetDataWithSize = 0L;
+    private long counterGetDataWrongCache = 0L;
 
-  @Cacheable(CacheEnabledTestConfiguration.DATA_CACHE_NAME)
-  public Data getData(String criteriaA, String criteriaB) {
-    counterGetData++;
-    LOGGER.info("Calling getData {} {} ", criteriaA, criteriaB);
-    return new Data(criteriaA, criteriaB, criteriaA.length());
-  }
-
-  @Cacheable(value = CacheEnabledTestConfiguration.DATA_CACHE_NAME,
-    key = "#criteriaA", unless = "#size < 5")
-  public Data getDataWithSize(String criteriaA, String criteriaB, int size) {
-    counterGetDataWithSize++;
-    LOGGER.info("Calling getDataWithSize {} {} {}", criteriaA, criteriaB, size);
-    return new Data(criteriaA, criteriaB, size);
-  }
-
-  @CacheEvict(value = CacheEnabledTestConfiguration.DATA_CACHE_NAME,
-    key = "#data.valueA")
-  public void store(Data data) {
-    LOGGER.info("Persisted {} to disk", data);
-  }
-
-  @Cacheable("wrongCache")
-  public Data getDataWrongCache(String criteria) {
-    counterGetDataWrongCache++;
-    LOGGER.info("Calling getDataWrongCache {} ", criteria);
-    return new Data(criteria, criteria.toUpperCase(), 10);
-  }
-
-  public long getCounterGetData() {
-    return counterGetData;
-  }
-
-  public long getCounterGetDataWithSize() {
-    return counterGetDataWithSize;
-  }
-
-  public long getCounterGetDataWrongCache() {
-    return counterGetDataWrongCache;
-  }
-
-  public void resetCounters() {
-    this.counterGetData = 0L;
-    this.counterGetDataWithSize = 0L;
-    this.counterGetDataWrongCache= 0L;
-  }
-
-  public static class Data implements Serializable {
-    private static final long serialVersionUID = 101106066653013623L;
-
-    private String valueA;
-    private String valueB;
-    private int intValue;
-
-    public Data(String valueA, String valueB, int intValue) {
-      this.valueA = valueA;
-      this.valueB = valueB;
-      this.intValue = intValue;
+    @Cacheable(CacheEnabledTestConfiguration.DATA_CACHE_NAME)
+    public Data getData(String criteriaA, String criteriaB) {
+        counterGetData++;
+        LOGGER.info("Calling getData {} {} ", criteriaA, criteriaB);
+        return new Data(criteriaA, criteriaB, criteriaA.length(),
+                CacheableMap.<String>build(String.class).put("bar", "foo"));
     }
 
-    public String getValueA() {
-      return valueA;
+    @Cacheable(value = CacheEnabledTestConfiguration.DATA_CACHE_NAME,
+            key = "#criteriaA", unless = "#size < 5")
+    public Data getDataWithSize(String criteriaA, String criteriaB, int size) {
+        counterGetDataWithSize++;
+        LOGGER.info("Calling getDataWithSize {} {} {}", criteriaA, criteriaB, size);
+        return new Data(criteriaA, criteriaB, size,
+                CacheableMap.<String>build(String.class).put("bar", "foo"));
     }
 
-    public String getValueB() {
-      return valueB;
+    @CacheEvict(value = CacheEnabledTestConfiguration.DATA_CACHE_NAME,
+            key = "#data.valueA")
+    public void store(Data data) {
+        LOGGER.info("Persisted {} to disk", data);
     }
 
-    public int getIntValue() {
-      return intValue;
+    @Cacheable("wrongCache")
+    public Data getDataWrongCache(String criteria) {
+        counterGetDataWrongCache++;
+        LOGGER.info("Calling getDataWrongCache {} ", criteria);
+        return new Data(criteria, criteria.toUpperCase(), 10,
+                CacheableMap.<String>build(String.class).put("bar", "foo"));
     }
 
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
-
-      Data data = (Data) o;
-
-      if (intValue != data.intValue) return false;
-      if (valueA != null ? !valueA.equals(data.valueA) : data.valueA != null) return false;
-      return !(valueB != null ? !valueB.equals(data.valueB) : data.valueB != null);
-
+    public long getCounterGetData() {
+        return counterGetData;
     }
 
-    @Override
-    public int hashCode() {
-      int result = valueA != null ? valueA.hashCode() : 0;
-      result = 31 * result + (valueB != null ? valueB.hashCode() : 0);
-      result = 31 * result + intValue;
-      return result;
+    public long getCounterGetDataWithSize() {
+        return counterGetDataWithSize;
     }
 
-    @Override
-    public String toString() {
-      return "Data{" +
-          "valueA='" + valueA + '\'' +
-          ", valueB='" + valueB + '\'' +
-          ", intValue=" + intValue +
-          '}';
+    public long getCounterGetDataWrongCache() {
+        return counterGetDataWrongCache;
     }
-  }
+
+    public void resetCounters() {
+        this.counterGetData = 0L;
+        this.counterGetDataWithSize = 0L;
+        this.counterGetDataWrongCache = 0L;
+    }
+
+    public static class Data implements Serializable {
+        private static final long serialVersionUID = 101106066653013623L;
+
+        private String valueA;
+        private String valueB;
+        private int intValue;
+        private CacheableMap<String> myMap;
+
+        public Data() {
+        }
+
+        public Data(String valueA, String valueB, int intValue, CacheableMap<String> cacheableMap) {
+            this.valueA = valueA;
+            this.valueB = valueB;
+            this.intValue = intValue;
+            this.myMap = cacheableMap;
+        }
+
+        public String getValueA() {
+            return valueA;
+        }
+
+        public String getValueB() {
+            return valueB;
+        }
+
+        public int getIntValue() {
+            return intValue;
+        }
+
+        public CacheableMap<String> getMyMap() { return myMap;}
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            Data data = (Data) o;
+
+            if (!myMap.equals(data.myMap)) return false;
+            if (intValue != data.intValue) return false;
+            if (valueA != null ? !valueA.equals(data.valueA) : data.valueA != null) return false;
+            return !(valueB != null ? !valueB.equals(data.valueB) : data.valueB != null);
+
+        }
+
+        @Override
+        public int hashCode() {
+            int result = valueA != null ? valueA.hashCode() : 0;
+            result = 31 * result + (valueB != null ? valueB.hashCode() : 0);
+            result = 31 * result + intValue;
+            result = 31 * result + (myMap != null ? myMap.hashCode() : 0);
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "Data{" +
+                    "valueA='" + valueA + '\'' +
+                    ", valueB='" + valueB + '\'' +
+                    ", intValue=" + intValue +
+                    ", myMap=" + (myMap == null ? "<null>" : myMap.toString()) +
+            '}';
+        }
+    }
 }

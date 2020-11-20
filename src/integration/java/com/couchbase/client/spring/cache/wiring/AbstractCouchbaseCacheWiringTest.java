@@ -115,7 +115,7 @@ public abstract class AbstractCouchbaseCacheWiringTest {
     CachedService.Data cachedData = service.getDataWithSize(criteriaA, criteriaB, size);
 
     assertNotSame(data, cachedData);
-    assertEquals(data, cachedData);
+    assertNotEquals(data.getMyMap(), cachedData.getMyMap()); // map will be created afresh on cache miss
     assertEquals(2, service.getCounterGetDataWithSize());
 
     SimpleKey unexpectedCacheKey = new SimpleKey(criteriaA, criteriaB, size);

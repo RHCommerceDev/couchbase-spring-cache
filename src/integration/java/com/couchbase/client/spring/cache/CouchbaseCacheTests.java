@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 
 import java.io.Serializable;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -38,6 +39,7 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
+import com.rh.rhapsody.commons.deser.jackson.SafeObjectMapper;
 import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -75,7 +77,7 @@ public class CouchbaseCacheTests {
    */
   @Test
   public void testConstruction() {
-    CouchbaseCache cache = new CouchbaseCache(cacheName, client);
+    CouchbaseCache cache = new CouchbaseCache(cacheName, client, SafeObjectMapper.Factory.buildRhapsodyStandard());
 
     assertEquals(cacheName, cache.getName());
     assertEquals(client, cache.getNativeCache());
@@ -86,7 +88,7 @@ public class CouchbaseCacheTests {
    */
   @Test
   public void testGetSet() {
-    CouchbaseCache cache = new CouchbaseCache(cacheName, client);
+    CouchbaseCache cache = new CouchbaseCache(cacheName, client, SafeObjectMapper.Factory.buildRhapsodyStandard());
 
     String key = "couchbase-cache-test";
     String value = "Hello World!";
@@ -106,7 +108,7 @@ public class CouchbaseCacheTests {
    */
   @Test
   public void testSetWithTtl() throws InterruptedException {
-    CouchbaseCache cache = new CouchbaseCache(cacheName, client, 1); // cache for 1 second
+    CouchbaseCache cache = new CouchbaseCache(cacheName, client, 1, SafeObjectMapper.Factory.buildRhapsodyStandard()); // cache for 1 second
 
     String key = "couchbase-cache-test";
     String value = "Hello World!";
@@ -121,17 +123,20 @@ public class CouchbaseCacheTests {
 
   @Test
   public void testGetSetWithCast() {
-    CouchbaseCache cache = new CouchbaseCache(cacheName, client);
+    CouchbaseCache cache = new CouchbaseCache(cacheName, client, SafeObjectMapper.Factory.buildRhapsodyStandard());
 
     String key = "couchbase-cache-user";
     User user = new User();
     user.firstname = "Michael";
+    user.lastname = Optional.of("Meyers");
 
     cache.put(key, user);
 
     User loaded = cache.get(key, User.class);
     assertNotNull(loaded);
     assertEquals(user.firstname, loaded.firstname);
+    assertTrue(loaded.lastname.isPresent());
+    assertEquals(user.lastname.get(), loaded.lastname.get());
   }
 
   /**
@@ -141,7 +146,7 @@ public class CouchbaseCacheTests {
    */
   @Test
   public void testEvict() throws Exception {
-    CouchbaseCache cache = new CouchbaseCache(cacheName, client);
+    CouchbaseCache cache = new CouchbaseCache(cacheName, client, SafeObjectMapper.Factory.buildRhapsodyStandard());
 
     String key = "couchbase-cache-test";
     String value = "Hello World!";
@@ -162,7 +167,7 @@ public class CouchbaseCacheTests {
    */
   @Test
   public void testSettingNullAndGetting() {
-    CouchbaseCache cache = new CouchbaseCache(cacheName, client);
+    CouchbaseCache cache = new CouchbaseCache(cacheName, client, SafeObjectMapper.Factory.buildRhapsodyStandard());
 
     String key = "couchbase-cache-test";
     String value = "Hello World!";
@@ -179,7 +184,7 @@ public class CouchbaseCacheTests {
    */
   @Test
   public void testClearingUsingViewDoesntImpactUnrelatedDocuments() {
-    CouchbaseCache cache = new CouchbaseCache(cacheName, client);
+    CouchbaseCache cache = new CouchbaseCache(cacheName, client, SafeObjectMapper.Factory.buildRhapsodyStandard());
     assertFalse("Expected flush to be disabled by default", cache.getAlwaysFlush());
 
     String key = "couchbase-cache-test";
@@ -196,7 +201,7 @@ public class CouchbaseCacheTests {
 
   @Test
   public void testClearingEmptyNameCacheUsingViewDoesntImpactUnrelatedDocuments() {
-    CouchbaseCache cache = new CouchbaseCache(cacheName, client);
+    CouchbaseCache cache = new CouchbaseCache(cacheName, client, SafeObjectMapper.Factory.buildRhapsodyStandard());
     assertFalse("Expected flush to be disabled by default", cache.getAlwaysFlush());
 
     String key = "couchbase-cache-test";
@@ -222,7 +227,7 @@ public class CouchbaseCacheTests {
   @Ignore("Flush clearing test disabled, see test comment.")
   @Test
   public void testClearingUsingFlushImpactsUnrelatedDocuments() {
-    CouchbaseCache cache = new CouchbaseCache(cacheName, client);
+    CouchbaseCache cache = new CouchbaseCache(cacheName, client, SafeObjectMapper.Factory.buildRhapsodyStandard());
     cache.setAlwaysFlush(true);
 
     String key = "couchbase-cache-test";
@@ -244,7 +249,7 @@ public class CouchbaseCacheTests {
 
   @Test
   public void testClearingEmptyCacheUsingViewSucceeds() {
-    CouchbaseCache cache = new CouchbaseCache("emptyCache", client);
+    CouchbaseCache cache = new CouchbaseCache("emptyCache", client, SafeObjectMapper.Factory.buildRhapsodyStandard());
     String unrelatedId = "unrelated";
     cache.getNativeCache().upsert(JsonDocument.create(unrelatedId, JsonObject.empty()));
 
@@ -259,7 +264,7 @@ public class CouchbaseCacheTests {
   @Test
   public void testCallingSyncGetInParallel() throws ExecutionException, InterruptedException {
     final String key = "getWithValueLoader";
-    final CouchbaseCache cache = new CouchbaseCache(cacheName, client);
+    final CouchbaseCache cache = new CouchbaseCache(cacheName, client, SafeObjectMapper.Factory.buildRhapsodyStandard());
     final String documentId = cache.getDocumentId(key);
     try { cache.getNativeCache().remove(documentId); } catch (DocumentDoesNotExistException e) {}
     final AtomicInteger count = new AtomicInteger(0);
@@ -290,6 +295,8 @@ public class CouchbaseCacheTests {
 
   static class User implements Serializable {
     public String firstname;
+
+    public Optional<String> lastname;
   }
 
 }

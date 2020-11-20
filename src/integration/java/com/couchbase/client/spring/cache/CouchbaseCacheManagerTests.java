@@ -19,6 +19,7 @@ package com.couchbase.client.spring.cache;
 import java.util.*;
 
 import com.couchbase.client.java.Bucket;
+import com.rh.rhapsody.commons.deser.jackson.SafeObjectMapper;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -60,7 +61,9 @@ public class CouchbaseCacheManagerTests {
 
   @Before
   public void setup() {
-    this.defaultCacheBuilder = CacheBuilder.newInstance(client);
+    SafeObjectMapper safeObjectMapper = SafeObjectMapper.Factory.buildRhapsodyStandard();
+
+    this.defaultCacheBuilder = CacheBuilder.newInstance(client).withObjectMapper(safeObjectMapper);
   }
 
   /**
