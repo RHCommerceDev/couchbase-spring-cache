@@ -18,8 +18,12 @@ package com.couchbase.client.spring.cache.wiring.javaConfig;
 import com.couchbase.client.spring.cache.CouchbaseCacheManager;
 import com.couchbase.client.spring.cache.CacheBuilder;
 import com.couchbase.client.spring.cache.TestConfiguration;
+import com.couchbase.client.spring.cache.wiring.CacheableMap;
+import com.couchbase.client.spring.cache.wiring.CacheableMapSerializer;
 import com.couchbase.client.spring.cache.wiring.CachedService;
 
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.rh.rhapsody.commons.deser.jackson.SafeObjectMapper;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -41,7 +45,8 @@ public class CacheEnabledTestConfiguration extends TestConfiguration {
 
   @Bean
   public CacheBuilder defaultBuilder() {
-    return CacheBuilder.newInstance(bucket());
+    return CacheBuilder.newInstance(bucket())
+            .withObjectMapper(SafeObjectMapper.Factory.buildRhapsodyStandard());
   }
 
   @Bean

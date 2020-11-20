@@ -1,6 +1,7 @@
 package com.couchbase.client.spring.cache;
 
 import com.couchbase.client.java.Bucket;
+import com.rh.rhapsody.commons.deser.jackson.SafeObjectMapper;
 
 import java.util.concurrent.TimeUnit;
 
@@ -15,6 +16,7 @@ public class CacheBuilder {
 
   private Bucket bucket;
   private int cacheExpiry;
+  private SafeObjectMapper objectMapper;
 
   protected CacheBuilder() {
     this.cacheExpiry = DEFAULT_TTL;
@@ -26,7 +28,7 @@ public class CacheBuilder {
    * @return a new builder
    */
   public static CacheBuilder newInstance(Bucket bucket) {
-    return new CacheBuilder().withBucket(bucket);
+    return new CacheBuilder().withBucket(bucket).withObjectMapper(SafeObjectMapper.Factory.buildRhapsodyStandard());
   }
 
   /**
@@ -39,6 +41,14 @@ public class CacheBuilder {
       throw new NullPointerException("A non-null Bucket is required for all cache builders");
     }
     this.bucket = bucket;
+    return this;
+  }
+
+  public CacheBuilder withObjectMapper(SafeObjectMapper objectMapper) {
+    if (objectMapper == null) {
+      throw new NullPointerException("A non-null ObjectMapper is required for all cache builders.");
+    }
+    this.objectMapper = objectMapper;
     return this;
   }
 
@@ -75,7 +85,7 @@ public class CacheBuilder {
    * @return a {@link CouchbaseCache} instance
    */
   public CouchbaseCache build(String cacheName) {
-    return new CouchbaseCache(cacheName, this.bucket, this.cacheExpiry);
+    return new CouchbaseCache(cacheName, this.bucket, this.cacheExpiry, this.objectMapper);
   }
 
 }

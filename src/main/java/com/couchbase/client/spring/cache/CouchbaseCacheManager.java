@@ -16,13 +16,13 @@
 
 package com.couchbase.client.spring.cache;
 
-import java.util.*;
-
 import com.couchbase.client.java.Bucket;
-
+import com.rh.rhapsody.commons.deser.jackson.SafeObjectMapper;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.support.AbstractCacheManager;
+
+import java.util.*;
 
 import static java.util.stream.Collectors.toSet;
 
@@ -39,10 +39,10 @@ import static java.util.stream.Collectors.toSet;
  */
 public class CouchbaseCacheManager extends AbstractCacheManager {
 
-  private CacheBuilder defaultCacheBuilder;
-
-  private boolean initialized;
   private final Map<String, CacheBuilder> initialCaches;
+
+  private CacheBuilder defaultCacheBuilder;
+  private boolean initialized;
   private boolean enabled = true;
 
   /**
