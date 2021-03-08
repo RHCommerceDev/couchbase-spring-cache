@@ -166,8 +166,18 @@ public class CouchbaseCache implements EnableableCache {
             ensureViewExists();
     }
 
-    public CacheStats getLocalCacheStats() {
-        return localCache.stats();
+    public String getLocalCacheStatsStr() {
+        CacheStats stats = localCache.stats();
+        return "{ 'size': " + localCache.estimatedSize()
+                + ", 'basicStats': { "
+                + "'hitCount': " + stats.hitCount()
+                + ", 'missCount': " + stats.missCount()
+                + ", 'loadSuccessCount': " + stats.loadSuccessCount()
+                + ", 'loadFailureCount': " + stats.loadFailureCount()
+                + ", 'totalLoadTime': " + stats.totalLoadTime()
+                + ", 'evictionCount': " + stats.evictionCount()
+                + ", 'evictionWeight': " + stats.evictionWeight()
+                + "} }";
     }
 
 
