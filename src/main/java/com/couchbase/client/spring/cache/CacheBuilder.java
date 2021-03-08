@@ -87,7 +87,7 @@ public class CacheBuilder {
 
   /**
    * Build a new {@link CouchbaseCache} with the specified name. If custom initial and maximum local Caffeine cache
-   * capacities are desired for a named cache, you may use the alternate, colon-delimited name format of <br/>
+   * capacities are desired for a named cache, you may use the alternate, colon-delimited name format of
    * [cache-name ':' initial-local-capacity ':' maximum-local-capacity] ('foo:10:100', e.g. excluding quotes).
    *
    * @param cacheName the name of the cache

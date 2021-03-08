@@ -145,6 +145,8 @@ public class CouchbaseCache implements EnableableCache {
      * @param name   the name of the cache reference.
      * @param client the Bucket instance.
      * @param ttl    TTL seconds for objects in this cache. Local cache uses (TTL/2)
+     * @param initLocalCapacity initial capacity of the local cache (less-than or equal-to maxLocalCapacity)
+     * @param maxLocalCapacity upper limit on local cache capacity (value of zero disables caching)
      */
     public CouchbaseCache(final String name, final Bucket client, int ttl, int initLocalCapacity, int maxLocalCapacity) {
         this.name = name;

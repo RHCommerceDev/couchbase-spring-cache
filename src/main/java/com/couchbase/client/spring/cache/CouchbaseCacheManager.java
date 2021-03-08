@@ -37,7 +37,7 @@ import static java.util.stream.Collectors.toSet;
  * @author Stéphane Nicoll
  */
 public class CouchbaseCacheManager extends AbstractCacheManager {
-    
+
     private CacheBuilder defaultCacheBuilder;
 
     private boolean initialized;
