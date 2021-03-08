@@ -12,12 +12,18 @@ import java.util.concurrent.TimeUnit;
 public class CacheBuilder {
 
   private static final int DEFAULT_TTL = 0;
+  private static final int DEFAULT_INITIAL_LOCAL_CAPACITY = 100;
+  private static final int DEFAULT_MAXIMUM_LOCAL_CAPACITY = 1000;
 
   private Bucket bucket;
   private int cacheExpiry;
+  private int initialLocalCapacity;
+  private int maximumLocalCapacity;
 
   protected CacheBuilder() {
     this.cacheExpiry = DEFAULT_TTL;
+    this.initialLocalCapacity = DEFAULT_INITIAL_LOCAL_CAPACITY;
+    this.maximumLocalCapacity = DEFAULT_MAXIMUM_LOCAL_CAPACITY;
   }
 
   /**
@@ -69,13 +75,40 @@ public class CacheBuilder {
     return this;
   }
 
+  public CacheBuilder withInitialLocalCapacity(int initialLocalCapacity) {
+    this.initialLocalCapacity = initialLocalCapacity;
+    return this;
+  }
+
+  public CacheBuilder withMaximumLocalCapacity(int maximumLocalCapacity) {
+    this.maximumLocalCapacity = maximumLocalCapacity;
+    return this;
+  }
+
   /**
-   * Build a new {@link CouchbaseCache} with the specified name.
+   * Build a new {@link CouchbaseCache} with the specified name. If custom initial and maximum local Caffeine cache
+   * capacities are desired for a named cache, you may use the alternate, colon-delimited name format of <br/>
+   * [cache-name ':' initial-local-capacity ':' maximum-local-capacity] ('foo:10:100', e.g. excluding quotes).
+   *
    * @param cacheName the name of the cache
    * @return a {@link CouchbaseCache} instance
    */
   public CouchbaseCache build(String cacheName) {
-    return new CouchbaseCache(cacheName, this.bucket, this.cacheExpiry);
+    String _cacheName = cacheName;
+    int _initialLocalCapacity = this.initialLocalCapacity;
+    int _maximumLocalCapacity = this.maximumLocalCapacity;
+
+    if (cacheName.contains(":")) {
+      String[] parts = cacheName.split(":");
+      if (parts.length != 3) {
+        throw new IllegalArgumentException("Configuration of named cache must be in the form " +
+                "[ cache-name ':' initial-local-capacity ':' maximum-local-capacity ]");
+      }
+      _cacheName = parts[0];
+      _initialLocalCapacity = Integer.parseInt(parts[1]);
+      _maximumLocalCapacity = Integer.parseInt(parts[2]);
+    }
+    return new CouchbaseCache(_cacheName, this.bucket, this.cacheExpiry, _initialLocalCapacity, _maximumLocalCapacity);
   }
 
 }

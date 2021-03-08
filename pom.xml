@@ -5,7 +5,7 @@
 
     <groupId>com.couchbase.client</groupId>
     <artifactId>couchbase-spring-cache</artifactId>
-    <version>2.8.0</version>
+    <version>3.0.0</version>
     <packaging>jar</packaging>
 
     <name>Couchbase Spring Cache</name>
@@ -94,6 +94,12 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <version>2.8.8</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 

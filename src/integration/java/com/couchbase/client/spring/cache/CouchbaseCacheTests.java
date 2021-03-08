@@ -106,7 +106,7 @@ public class CouchbaseCacheTests {
    */
   @Test
   public void testSetWithTtl() throws InterruptedException {
-    CouchbaseCache cache = new CouchbaseCache(cacheName, client, 1); // cache for 1 second
+    CouchbaseCache cache = new CouchbaseCache(cacheName, client, 1 , 1, 1); // cache for 1 second
 
     String key = "couchbase-cache-test";
     String value = "Hello World!";

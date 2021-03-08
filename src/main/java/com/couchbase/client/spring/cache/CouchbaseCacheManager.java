@@ -16,19 +16,18 @@
 
 package com.couchbase.client.spring.cache;
 
-import java.util.*;
-
 import com.couchbase.client.java.Bucket;
-
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.support.AbstractCacheManager;
+
+import java.util.*;
 
 import static java.util.stream.Collectors.toSet;
 
 /**
  * The {@link CouchbaseCacheManager} orchestrates {@link CouchbaseCache} instances.
- * 
+ * <p>
  * Since more than one current {@link Bucket} connection can be used for caching, the
  * {@link CouchbaseCacheManager} orchestrates and handles them for the Spring {@link Cache} abstraction layer.
  *
@@ -38,157 +37,159 @@ import static java.util.stream.Collectors.toSet;
  * @author Stéphane Nicoll
  */
 public class CouchbaseCacheManager extends AbstractCacheManager {
+    
+    private CacheBuilder defaultCacheBuilder;
 
-  private CacheBuilder defaultCacheBuilder;
+    private boolean initialized;
+    private final Map<String, CacheBuilder> initialCaches;
+    private boolean enabled = true;
 
-  private boolean initialized;
-  private final Map<String, CacheBuilder> initialCaches;
-  private boolean enabled = true;
-
-  /**
-   * Construct a {@link CacheManager} with a "template" {@link CacheBuilder} (at least specifying a backing
-   * {@link Bucket}).
-   *
-   * If a list of predetermined cache names is provided, the manager is "static" and these caches will all be
-   * prepared using the provided template builder.
-   *
-   * If no list is provided, the manager will be "dynamic" and additional caches can be added later on just by name,
-   * as they'll use the template builder for their configuration.
-   *
-   * Note that builders are used lazily and should not be mutated after having been passed to this constructor.
-   *
-   * @param cacheBuilder the template (backing client, optional ttl) to use either for static construction of specified
-   * caches or later dynamic construction.
-   * @param enabled The initial value of {@link #setAllEnabled(boolean)}
-   * @param cacheNames the names of caches recognized by this manager initially. If empty, caches can be added
-   * dynamically later. Null names will be ignored.
-   * @see CouchbaseCacheManager#setDefaultCacheBuilder(CacheBuilder) to force activation of dynamic creation later on.
-   */
-  public CouchbaseCacheManager(CacheBuilder cacheBuilder, boolean enabled, String... cacheNames) {
-    if (cacheBuilder == null) {
-      throw new NullPointerException("CacheBuilder template is mandatory");
+    /**
+     * Construct a {@link CacheManager} with a "template" {@link CacheBuilder} (at least specifying a backing
+     * {@link Bucket}).
+     * <p>
+     * If a list of predetermined cache names is provided, the manager is "static" and these caches will all be
+     * prepared using the provided template builder.
+     * <p>
+     * If no list is provided, the manager will be "dynamic" and additional caches can be added later on just by name,
+     * as they'll use the template builder for their configuration.
+     * <p>
+     * Note that builders are used lazily and should not be mutated after having been passed to this constructor.
+     *
+     * @param cacheBuilder the template (backing client, optional ttl) to use either for static construction of specified
+     *                     caches or later dynamic construction.
+     * @param enabled      The initial value of {@link #setAllEnabled(boolean)}
+     * @param cacheNames   the names of caches recognized by this manager initially. If empty, caches can be added
+     *                     dynamically later. Null names will be ignored.
+     * @see CouchbaseCacheManager#setDefaultCacheBuilder(CacheBuilder) to force activation of dynamic creation later on.
+     */
+    public CouchbaseCacheManager(CacheBuilder cacheBuilder, boolean enabled, String... cacheNames) {
+        if (cacheBuilder == null) {
+            throw new NullPointerException("CacheBuilder template is mandatory");
+        }
+        Set<String> names = cacheNames.length == 0 ? Collections.<String>emptySet()
+                : new LinkedHashSet<String>(Arrays.asList(cacheNames));
+        this.initialCaches = new HashMap<String, CacheBuilder>(names.size());
+        for (String name : names) {
+            if (name != null) {
+                this.initialCaches.put(name, cacheBuilder);
+            }
+        }
+        if (this.initialCaches.isEmpty()) {
+            this.defaultCacheBuilder = cacheBuilder;
+        }
+        // Individual caches to be set after loadCaches()
+        this.enabled = enabled;
     }
-    Set<String> names = cacheNames.length == 0? Collections.<String> emptySet()
-            : new LinkedHashSet<String>(Arrays.asList(cacheNames));
-    this.initialCaches = new HashMap<String, CacheBuilder>(names.size());
-    for (String name : names) {
-      if (name != null) {
-        this.initialCaches.put(name, cacheBuilder);
-      }
+
+    public CouchbaseCacheManager(CacheBuilder cacheBuilder, String... cacheNames) {
+        this(cacheBuilder, true, cacheNames);
     }
-    if (this.initialCaches.isEmpty()) {
-      this.defaultCacheBuilder = cacheBuilder;
+
+    /**
+     * Construct a {@link CacheManager} knowing about a predetermined set of caches at construction. The caches are
+     * all explicitly described (using a {@link CacheBuilder} and the manager cannot create caches dynamically until
+     * {@link #setDefaultCacheBuilder(CacheBuilder)} is called.
+     * <p>
+     * Note that builders are used lazily and should not be mutated after having been passed to this constructor.
+     *
+     * @param initialCaches the caches to make available on startup
+     */
+    public CouchbaseCacheManager(Map<String, CacheBuilder> initialCaches) {
+        if (initialCaches == null || initialCaches.isEmpty()) {
+            throw new IllegalArgumentException("At least one cache builder must be specified.");
+        }
+        this.initialCaches = new HashMap<String, CacheBuilder>(initialCaches);
     }
-    // Individual caches to be set after loadCaches()
-    this.enabled = enabled;
-  }
 
-  public CouchbaseCacheManager(CacheBuilder cacheBuilder, String... cacheNames) {
-    this(cacheBuilder, true, cacheNames);
-  }
-
-  /**
-   * Construct a {@link CacheManager} knowing about a predetermined set of caches at construction. The caches are
-   * all explicitly described (using a {@link CacheBuilder} and the manager cannot create caches dynamically until
-   * {@link #setDefaultCacheBuilder(CacheBuilder)} is called.
-   *
-   * Note that builders are used lazily and should not be mutated after having been passed to this constructor.
-   *
-   * @param initialCaches the caches to make available on startup
-   */
-  public CouchbaseCacheManager(Map<String, CacheBuilder> initialCaches) {
-    if (initialCaches == null || initialCaches.isEmpty()) {
-      throw new IllegalArgumentException("At least one cache builder must be specified.");
+    /**
+     * Set the default cache builder to use to create caches on the fly. Set it to {@code null}
+     * to prevent cache to be created at runtime.
+     *
+     * @param defaultCacheBuilder the cache builder to use
+     */
+    public void setDefaultCacheBuilder(CacheBuilder defaultCacheBuilder) {
+        this.defaultCacheBuilder = defaultCacheBuilder;
     }
-    this.initialCaches = new HashMap<String, CacheBuilder>(initialCaches);
-  }
 
-  /**
-   * Set the default cache builder to use to create caches on the fly. Set it to {@code null}
-   * to prevent cache to be created at runtime.
-   *
-   * @param defaultCacheBuilder the cache builder to use
-   */
-  public void setDefaultCacheBuilder(CacheBuilder defaultCacheBuilder) {
-    this.defaultCacheBuilder = defaultCacheBuilder;
-  }
-
-  /**
-   * Register an additional cache with the specified name using the default builder.
-   * <p>
-   * Caches can only be configured at initialization time. Once the cache manager
-   * has been initialized, no cache can be further prepared.
-   * @param name the name of the cache to add
-   * @throws IllegalStateException if no builder is available or if the cache manager
-   * has already been initialized
-   */
-  public void prepareCache(String name) {
-    if (defaultCacheBuilder == null) {
-      throw new IllegalStateException("No default cache builder is specified.");
+    /**
+     * Register an additional cache with the specified name using the default builder.
+     * <p>
+     * Caches can only be configured at initialization time. Once the cache manager
+     * has been initialized, no cache can be further prepared.
+     *
+     * @param name the name of the cache to add
+     * @throws IllegalStateException if no builder is available or if the cache manager
+     *                               has already been initialized
+     */
+    public void prepareCache(String name) {
+        if (defaultCacheBuilder == null) {
+            throw new IllegalStateException("No default cache builder is specified.");
+        }
+        prepareCache(name, defaultCacheBuilder);
     }
-    prepareCache(name, defaultCacheBuilder);
-  }
 
-  /**
-   * Register an additional cache with the specified name using the specified
-   * {@link CacheBuilder}.
-   * <p>
-   * Caches can only be configured at initialization time. Once the cache manager
-   * has been initialized, no cache can be further prepared.
-   * @param name the name of the cache to add
-   * @param builder CacheBuildercp
-   * @throws IllegalStateException the cache manager has already been initialized
-   */
-  public void prepareCache(String name, CacheBuilder builder) {
-    if (initialized) {
-      throw new IllegalStateException("This cache manager has already been initialized. No " +
-              "further cache can be prepared.");
+    /**
+     * Register an additional cache with the specified name using the specified
+     * {@link CacheBuilder}.
+     * <p>
+     * Caches can only be configured at initialization time. Once the cache manager
+     * has been initialized, no cache can be further prepared.
+     *
+     * @param name    the name of the cache to add
+     * @param builder CacheBuildercp
+     * @throws IllegalStateException the cache manager has already been initialized
+     */
+    public void prepareCache(String name, CacheBuilder builder) {
+        if (initialized) {
+            throw new IllegalStateException("This cache manager has already been initialized. No " +
+                    "further cache can be prepared.");
+        }
+        this.initialCaches.put(name, builder);
     }
-    this.initialCaches.put(name, builder);
-  }
 
-  @Override
-  protected Cache getMissingCache(String name) {
-    return (defaultCacheBuilder != null ? defaultCacheBuilder.build(name) : null);
-  }
-
-  @Override
-  protected final Collection<? extends Cache> loadCaches() {
-    initialized = true;
-    List<Cache> caches = new LinkedList<Cache>();
-    for (Map.Entry<String, CacheBuilder> entry : initialCaches.entrySet()) {
-      caches.add(entry.getValue().build(entry.getKey()));
+    @Override
+    protected Cache getMissingCache(String name) {
+        return (defaultCacheBuilder != null ? defaultCacheBuilder.build(name) : null);
     }
-    setAllEnabled(this.enabled);
-    return caches;
-  }
 
-  public void clearAll() {
-    this.getCacheNames().forEach(name -> {
-      this.getCache(name).clear();
-    });
-  }
+    @Override
+    protected final Collection<? extends Cache> loadCaches() {
+        initialized = true;
+        List<Cache> caches = new LinkedList<Cache>();
+        for (Map.Entry<String, CacheBuilder> entry : initialCaches.entrySet()) {
+            caches.add(entry.getValue().build(entry.getKey()));
+        }
+        setAllEnabled(this.enabled);
+        return caches;
+    }
 
-  private Set<EnableableCache> getEnableableCaches() {
-    return this.getCacheNames()
-            .stream()
-            .map(this::getCache)
-            .filter(cache -> cache instanceof EnableableCache)
-            .map(cache -> (EnableableCache) cache)
-            .collect(toSet());
-  }
+    public void clearAll() {
+        this.getCacheNames().forEach(name -> {
+            this.getCache(name).clear();
+        });
+    }
 
-  public void setAllEnabled(boolean enabled) {
-    this.enabled = enabled;
-    getEnableableCaches()
-            .forEach(cache -> cache.setEnabled(enabled));
-  }
+    private Set<EnableableCache> getEnableableCaches() {
+        return this.getCacheNames()
+                .stream()
+                .map(this::getCache)
+                .filter(cache -> cache instanceof EnableableCache)
+                .map(cache -> (EnableableCache) cache)
+                .collect(toSet());
+    }
 
-  public boolean areAllEnabled() {
-    //Anything that isn't an EnableableCache is automatically considered enabled.
-    return getEnableableCaches()
-            .stream()
-            .allMatch(EnableableCache::isEnabled);
-  }
+    public void setAllEnabled(boolean enabled) {
+        this.enabled = enabled;
+        getEnableableCaches()
+                .forEach(cache -> cache.setEnabled(enabled));
+    }
+
+    public boolean areAllEnabled() {
+        //Anything that isn't an EnableableCache is automatically considered enabled.
+        return getEnableableCaches()
+                .stream()
+                .allMatch(EnableableCache::isEnabled);
+    }
 
 }
