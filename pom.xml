@@ -5,7 +5,7 @@
 
     <groupId>com.couchbase.client</groupId>
     <artifactId>couchbase-spring-cache</artifactId>
-    <version>3.0.0</version>
+    <version>5.0.0</version>
     <packaging>jar</packaging>
 
     <name>Couchbase Spring Cache</name>
@@ -52,8 +52,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>11</java.version>
 
-        <spring.version>4.3.5.RELEASE</spring.version>
-        <couchbase.version>2.7.16</couchbase.version>
+        <spring.version>5.3.18</spring.version>
+        <couchbase.version>2.7.23</couchbase.version>
         <slf4j.version>1.7.10</slf4j.version>
 
         <junit.version>4.12</junit.version>
